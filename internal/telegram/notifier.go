@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"marketplace-notifications/internal/config"
 	"marketplace-notifications/internal/marketplaces"
 	"marketplace-notifications/internal/marketplaces/wb"
@@ -26,7 +27,7 @@ type TelegramNotifier struct {
 }
 
 type TelegramMessage struct {
-	ChatID    string `json:"chat_id"`
+	ChatId    string `json:"chat_id"`
 	Text      string `json:"text"`
 	ParseMode string `json:"parse_mode"`
 }
@@ -43,34 +44,42 @@ func NewTelegramNotifier(config *config.TelegramConfig) *TelegramNotifier {
 	}
 }
 
-func (notifier *TelegramNotifier) SendSummaryNotification(questionsNumber, feedbacksNumber int) error {
-	message := TelegramMessage{
-		ChatID:    notifier.config.ChatId,
-		Text:      notifier.formatSummaryNotificationMessage(questionsNumber, feedbacksNumber),
-		ParseMode: "MarkdownV2",
-	}
-
-	return notifier.sendMessage(message)
+func (notifier *TelegramNotifier) SendSummaryNotificationToAllChats(questionsNumber int, feedbacksNumber int) error {
+	return notifier.sendNotificationToAllChats(notifier.formatSummaryNotificationMessage(questionsNumber, feedbacksNumber))
 }
 
-func (notifier *TelegramNotifier) SendQuestionNotification(question wb.Question) error {
-	message := TelegramMessage{
-		ChatID:    notifier.config.ChatId,
-		Text:      notifier.formatUserReactionNotificationMessage(question, marketplaces.Question),
-		ParseMode: "MarkdownV2",
-	}
-
-	return notifier.sendMessage(message)
+func (notifier *TelegramNotifier) SendQuestionNotificationToAllChats(question wb.Question) error {
+	return notifier.sendNotificationToAllChats(notifier.formatUserReactionNotificationMessage(question, marketplaces.Question))
 }
 
-func (notifier *TelegramNotifier) SendFeedbackNotification(feedback wb.Feedback) error {
-	message := TelegramMessage{
-		ChatID:    notifier.config.ChatId,
-		Text:      notifier.formatUserReactionNotificationMessage(feedback, marketplaces.Feedback),
-		ParseMode: "MarkdownV2",
+func (notifier *TelegramNotifier) SendFeedbackNotificationToAllChats(feedback wb.Feedback) error {
+	return notifier.sendNotificationToAllChats(notifier.formatUserReactionNotificationMessage(feedback, marketplaces.Feedback))
+}
+
+func (notifier *TelegramNotifier) sendNotificationToAllChats(text string) error {
+	var lastErr error
+	var successCount int
+
+	for _, chatId := range notifier.config.ChatIds {
+		message := TelegramMessage{
+			ChatId:    chatId,
+			Text:      text,
+			ParseMode: "MarkdownV2",
+		}
+
+		if err := notifier.sendMessage(message); err != nil {
+			lastErr = err
+			log.Printf("[ERROR] Failed to send notification to chat: %s", chatId)
+		} else {
+			successCount++
+		}
 	}
 
-	return notifier.sendMessage(message)
+	if successCount == 0 && lastErr != nil {
+		return fmt.Errorf("Failed to send to all chats. Last error: %w", lastErr)
+	}
+
+	return nil
 }
 
 func (notifier *TelegramNotifier) sendMessage(message TelegramMessage) error {

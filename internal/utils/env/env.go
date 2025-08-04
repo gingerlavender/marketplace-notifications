@@ -3,12 +3,29 @@ package env
 import (
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
 func GetEnv(key, defaultValue string) string {
 	if value := os.Getenv(key); value != "" {
 		return value
+	}
+	return defaultValue
+}
+
+func GetEnvStringSlice(key string, defaultValue []string) []string {
+	if value := os.Getenv(key); value != "" {
+		var chatIds []string
+
+		for chatId := range strings.SplitSeq(value, ",") {
+			chatId = strings.TrimSpace(chatId)
+			if chatId != "" {
+				chatIds = append(chatIds, chatId)
+			}
+		}
+
+		return chatIds
 	}
 	return defaultValue
 }

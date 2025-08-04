@@ -31,7 +31,7 @@ type APIConfig struct {
 
 type TelegramConfig struct {
 	BotToken string
-	ChatId   string
+	ChatIds  []string
 	Timeout  time.Duration
 	RPS      int
 }
@@ -51,7 +51,7 @@ func Load() (*Config, error) {
 		},
 		Telegram: TelegramConfig{
 			BotToken: env.GetEnv("TELEGRAM_BOT_TOKEN", ""),
-			ChatId:   env.GetEnv("TELEGRAM_CHAT_ID", ""),
+			ChatIds:  env.GetEnvStringSlice("TELEGRAM_CHAT_IDS", nil),
 			Timeout:  env.GetEnvDuration("TELEGRAM_API_TIMEOUT", 30*time.Second),
 			RPS:      1,
 		},
@@ -75,8 +75,8 @@ func (config *Config) validate() error {
 	if config.Telegram.BotToken == "" {
 		return fmt.Errorf("missing TELEGRAM_BOT_TOKEN")
 	}
-	if config.Telegram.ChatId == "" {
-		return fmt.Errorf("missing TELEGRAM_CHAT_ID")
+	if len(config.Telegram.ChatIds) == 0 {
+		return fmt.Errorf("missing TELEGRAM_CHAT_IDS")
 	}
 
 	return nil

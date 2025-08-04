@@ -123,7 +123,7 @@ func (monitor *Monitor) checkForUpdates() {
 	if newQuestionsNumber > 0 || newFeedbacksNumber > 0 {
 		monitor.lastUpdateDiscovered = monitor.lastCheck
 
-		if err := monitor.notifier.SendSummaryNotification(newQuestionsNumber, newFeedbacksNumber); err != nil {
+		if err := monitor.notifier.SendSummaryNotificationToAllChats(newQuestionsNumber, newFeedbacksNumber); err != nil {
 			log.Printf("[ERROR] Failed to send summary notification: %v", err)
 		} else {
 			log.Printf("[INFO] Summary notification sent")
@@ -131,7 +131,7 @@ func (monitor *Monitor) checkForUpdates() {
 	}
 
 	for _, question := range questions {
-		if err := monitor.notifier.SendQuestionNotification(question); err != nil {
+		if err := monitor.notifier.SendQuestionNotificationToAllChats(question); err != nil {
 			log.Printf("[ERROR] Failed to send notification for question with id %s: %v", question.Id, err)
 		} else {
 			log.Printf("[INFO] Sent question notification with id %s", question.Id)
@@ -139,7 +139,7 @@ func (monitor *Monitor) checkForUpdates() {
 	}
 
 	for _, feedback := range feedbacks {
-		if err := monitor.notifier.SendFeedbackNotification(feedback); err != nil {
+		if err := monitor.notifier.SendFeedbackNotificationToAllChats(feedback); err != nil {
 			log.Printf("[ERROR] Failed to send notification for feedback with id %s: %v", feedback.Id, err)
 		} else {
 			log.Printf("[INFO] Sent feedback notification with id %s", feedback.Id)
