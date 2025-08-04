@@ -11,7 +11,6 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
-	"time"
 
 	"golang.org/x/time/rate"
 )
@@ -34,8 +33,8 @@ func NewAPIClient(config *config.APIConfig) *APIClient {
 	}
 }
 
-func (client *APIClient) FetchWBQuestionsForPeriod(period time.Duration) ([]wb.Question, error) {
-	jsonData, err := client.FetchWBDataForPeriod(period, marketplaces.Question)
+func (client *APIClient) FetchWBQuestions() ([]wb.Question, error) {
+	jsonData, err := client.FetchWBData(marketplaces.Question)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch questions: %w", err)
 	}
@@ -48,8 +47,8 @@ func (client *APIClient) FetchWBQuestionsForPeriod(period time.Duration) ([]wb.Q
 	return questionsResponse.Data.Questions, nil
 }
 
-func (client *APIClient) FetchWBFeedbacksForPeriod(period time.Duration) ([]wb.Feedback, error) {
-	jsonData, err := client.FetchWBDataForPeriod(period, marketplaces.Feedback)
+func (client *APIClient) FetchWBFeedbacks() ([]wb.Feedback, error) {
+	jsonData, err := client.FetchWBData(marketplaces.Feedback)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch feedbacks: %w", err)
 	}
@@ -62,7 +61,7 @@ func (client *APIClient) FetchWBFeedbacksForPeriod(period time.Duration) ([]wb.F
 	return feedbacksResponse.Data.Feedbacks, nil
 }
 
-func (client *APIClient) FetchWBDataForPeriod(period time.Duration, reactionType marketplaces.UserReactionType) ([]byte, error) {
+func (client *APIClient) FetchWBData(reactionType marketplaces.UserReactionType) ([]byte, error) {
 	if err := client.wbLimiter.Wait(context.Background()); err != nil {
 		return nil, fmt.Errorf("WB rate limiter error: %w", err)
 	}
@@ -84,7 +83,7 @@ func (client *APIClient) FetchWBDataForPeriod(period time.Duration, reactionType
 
 	query := url.Values{}
 
-	query.Set("isAnswered", strconv.FormatBool(false))
+	query.Set("isAnswered", strconv.FormatBool(true))
 	query.Set("take", strconv.Itoa(maxNewReactions))
 	query.Set("skip", strconv.Itoa(0))
 

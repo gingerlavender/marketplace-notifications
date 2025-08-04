@@ -100,15 +100,14 @@ func (monitor *Monitor) run() {
 func (monitor *Monitor) checkForUpdates() {
 	log.Println("[INFO] Checking for questions...")
 
-	questions, questionsErr := monitor.apiClient.FetchWBQuestionsForPeriod(monitor.config.CheckInterval)
+	questions, questionsErr := monitor.apiClient.FetchWBQuestions()
 	if questionsErr != nil {
 		log.Printf("[ERROR] Failed to check for questions: %v", questionsErr)
-
 	}
 
 	log.Println("[INFO] Checking for feedbacks...")
 
-	feedbacks, feedbacksErr := monitor.apiClient.FetchWBFeedbacksForPeriod(monitor.config.CheckInterval)
+	feedbacks, feedbacksErr := monitor.apiClient.FetchWBFeedbacks()
 	if feedbacksErr != nil {
 		log.Printf("[ERROR] Failed to check for feedbacks: %v", feedbacksErr)
 	}
@@ -119,11 +118,17 @@ func (monitor *Monitor) checkForUpdates() {
 
 	newQuestionsNumber, newFeedbacksNumber := len(questions), len(feedbacks)
 
+	log.Printf("[INFO] Found %d new questions and %d new feedbacks", newQuestionsNumber, newFeedbacksNumber)
+
 	if newQuestionsNumber > 0 || newFeedbacksNumber > 0 {
 		monitor.lastUpdateDiscovered = monitor.lastCheck
-	}
 
-	log.Printf("[INFO] Found %d new questions and %d new feedbacks", newQuestionsNumber, newFeedbacksNumber)
+		if err := monitor.notifier.SendSummaryNotification(newQuestionsNumber, newFeedbacksNumber); err != nil {
+			log.Printf("[ERROR] Failed to send summary notification: %v", err)
+		} else {
+			log.Printf("[INFO] Summary notification sent")
+		}
+	}
 
 	for _, question := range questions {
 		if err := monitor.notifier.SendQuestionNotification(question); err != nil {

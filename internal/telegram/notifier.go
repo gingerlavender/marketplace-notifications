@@ -43,10 +43,20 @@ func NewTelegramNotifier(config *config.TelegramConfig) *TelegramNotifier {
 	}
 }
 
+func (notifier *TelegramNotifier) SendSummaryNotification(questionsNumber, feedbacksNumber int) error {
+	message := TelegramMessage{
+		ChatID:    notifier.config.ChatId,
+		Text:      notifier.formatSummaryNotificationMessage(questionsNumber, feedbacksNumber),
+		ParseMode: "MarkdownV2",
+	}
+
+	return notifier.sendMessage(message)
+}
+
 func (notifier *TelegramNotifier) SendQuestionNotification(question wb.Question) error {
 	message := TelegramMessage{
 		ChatID:    notifier.config.ChatId,
-		Text:      notifier.formatNotificationMessage(question, marketplaces.Question),
+		Text:      notifier.formatUserReactionNotificationMessage(question, marketplaces.Question),
 		ParseMode: "MarkdownV2",
 	}
 
@@ -56,7 +66,7 @@ func (notifier *TelegramNotifier) SendQuestionNotification(question wb.Question)
 func (notifier *TelegramNotifier) SendFeedbackNotification(feedback wb.Feedback) error {
 	message := TelegramMessage{
 		ChatID:    notifier.config.ChatId,
-		Text:      notifier.formatNotificationMessage(feedback, marketplaces.Feedback),
+		Text:      notifier.formatUserReactionNotificationMessage(feedback, marketplaces.Feedback),
 		ParseMode: "MarkdownV2",
 	}
 
@@ -87,13 +97,28 @@ func (notifier *TelegramNotifier) sendMessage(message TelegramMessage) error {
 	return nil
 }
 
-func (notifier *TelegramNotifier) formatNotificationMessage(userReaction MardownFormatter, reactionType marketplaces.UserReactionType) string {
+func (notifier *TelegramNotifier) formatSummaryNotificationMessage(questionsNumber, feedbacksNumber int) string {
+	var message strings.Builder
+
+	message.WriteString(fmt.Sprintf("🔔 *Пользователи ждут вашего ответа\\!* 🔔\n\n"))
+
+	message.WriteString(fmt.Sprintf("*🗓️ На данный момент у вас:*\n\n"))
+
+	message.WriteString(fmt.Sprintf("❔ Неотвеченных *вопросов*: %d\n", questionsNumber))
+	message.WriteString(fmt.Sprintf("💬 Неотвеченных *отзывов*: %d\n\n", feedbacksNumber))
+
+	message.WriteString(fmt.Sprintf("📃 Полный список в сообщениях ниже:\n"))
+
+	return message.String()
+}
+
+func (notifier *TelegramNotifier) formatUserReactionNotificationMessage(userReaction MardownFormatter, reactionType marketplaces.UserReactionType) string {
 	var message strings.Builder
 
 	if reactionType == marketplaces.Question {
-		message.WriteString(fmt.Sprintf("🔔✍️🔔 *Новый вопрос\\!*\n\n"))
+		message.WriteString(fmt.Sprintf("*❔ Неотвеченный вопрос:*\n\n"))
 	} else {
-		message.WriteString(fmt.Sprintf("🔔💬🔔 *Новый отзыв\\!*\n\n"))
+		message.WriteString(fmt.Sprintf("*💬 Неотвеченный отзыв:*\n\n"))
 	}
 
 	message.WriteString(userReaction.FormatMarkdown())
