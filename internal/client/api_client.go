@@ -84,10 +84,9 @@ func (client *APIClient) FetchWBDataForPeriod(period time.Duration, reactionType
 
 	query := url.Values{}
 
-	query.Set("isAnswered", strconv.FormatBool(true)) // 'true' for tests only
+	query.Set("isAnswered", strconv.FormatBool(false))
 	query.Set("take", strconv.Itoa(maxNewReactions))
 	query.Set("skip", strconv.Itoa(0))
-	query.Set("dateFrom", strconv.FormatInt(time.Now().Add(-time.Hour*24*31).Unix(), 10)) // '-time.Hour*24*31' for tests only
 
 	baseURL.RawQuery = query.Encode()
 

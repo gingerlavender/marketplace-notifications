@@ -43,7 +43,7 @@ func Load() (*Config, error) {
 			ControlToken: env.GetEnv("CONTROL_TOKEN", ""),
 		},
 		Monitor: MonitorConfig{
-			CheckInterval: env.GetEnvDuration("CHECK_INTERVAL", 5*time.Minute),
+			CheckInterval: env.GetEnvDuration("CHECK_INTERVAL", 2*time.Minute),
 		},
 		API: APIConfig{
 			WB:      wb.GetConfig(env.GetEnv("WB_JWT", ""), env.GetEnvInt("MAX_NEW_QUESTIONS_TO_FETCH", 20), env.GetEnvInt("MAX_NEW_FEEDBACKS_TO_FETCH", 20)),

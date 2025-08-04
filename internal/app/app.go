@@ -46,8 +46,8 @@ func (app *App) Run() {
 	router := gin.Default()
 
 	router.GET("/info", app.getInfo)
-	router.GET("/start", app.start)
-	router.GET("/stop", app.stop)
+	router.POST("/start", app.start)
+	router.POST("/stop", app.stop)
 
 	router.Run(fmt.Sprintf(":%d", app.config.Port))
 }
