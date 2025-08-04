@@ -83,7 +83,7 @@ func (client *APIClient) FetchWBData(reactionType marketplaces.UserReactionType)
 
 	query := url.Values{}
 
-	query.Set("isAnswered", strconv.FormatBool(true))
+	query.Set("isAnswered", strconv.FormatBool(false))
 	query.Set("take", strconv.Itoa(maxNewReactions))
 	query.Set("skip", strconv.Itoa(0))
 
