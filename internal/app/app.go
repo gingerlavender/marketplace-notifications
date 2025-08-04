@@ -19,9 +19,9 @@ type App struct {
 }
 
 func NewApp() *App {
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal(err)
+	if err := godotenv.Load(); err != nil {
+		log.Printf("Warning: Could not load .env file: %v", err)
+		log.Println("Assuming environment variables are set directly")
 	}
 
 	config, err := config.Load()
