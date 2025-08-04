@@ -35,15 +35,15 @@ func (monitor *Monitor) Start() {
 	defer monitor.mutex.Unlock()
 
 	if monitor.isRunning {
-		log.Println("Already running")
+		log.Println("[INFO] Already running")
 		return
 	}
 
 	monitor.ctx, monitor.cancel = context.WithCancel(context.Background())
 	monitor.isRunning = true
 
-	log.Println("Starting monitor...")
-	log.Printf("Check interval: %s", monitor.config.CheckInterval)
+	log.Println("[INFO] Starting monitor...")
+	log.Printf("[INFO] Check interval: %s", monitor.config.CheckInterval)
 
 	go monitor.run()
 }
@@ -53,7 +53,7 @@ func (monitor *Monitor) Stop() {
 	defer monitor.mutex.Unlock()
 
 	if !monitor.isRunning {
-		log.Println("Monitor is not running")
+		log.Println("[INFO] Monitor is not running")
 		return
 	}
 
@@ -91,18 +91,18 @@ func (monitor *Monitor) run() {
 		case <-ticker.C:
 			monitor.checkForUpdates()
 		case <-monitor.ctx.Done():
-			log.Println("Monitor stopped")
+			log.Println("[INFO] Monitor stopped")
 			return
 		}
 	}
 }
 
 func (monitor *Monitor) checkForUpdates() {
-	log.Println("Checking for questions...")
+	log.Println("[INFO] Checking for questions...")
 
 	questions, questionsErr := monitor.apiClient.FetchWBQuestionsForPeriod(monitor.config.CheckInterval)
 	if questionsErr != nil {
-		log.Printf("Failed to check for questions: %v", questionsErr)
+		log.Printf("[ERROR] Failed to check for questions: %v", questionsErr)
 
 	}
 
@@ -110,7 +110,7 @@ func (monitor *Monitor) checkForUpdates() {
 
 	feedbacks, feedbacksErr := monitor.apiClient.FetchWBFeedbacksForPeriod(monitor.config.CheckInterval)
 	if feedbacksErr != nil {
-		log.Printf("Failed to check for feedbacks: %v", feedbacksErr)
+		log.Printf("[ERROR] Failed to check for feedbacks: %v", feedbacksErr)
 	}
 
 	if questionsErr == nil && feedbacksErr == nil {
@@ -123,21 +123,21 @@ func (monitor *Monitor) checkForUpdates() {
 		monitor.lastUpdateDiscovered = monitor.lastCheck
 	}
 
-	log.Printf("Found %d new questions and %d new feedbacks", newQuestionsNumber, newFeedbacksNumber)
+	log.Printf("[INFO] Found %d new questions and %d new feedbacks", newQuestionsNumber, newFeedbacksNumber)
 
 	for _, question := range questions {
 		if err := monitor.notifier.SendQuestionNotification(question); err != nil {
-			log.Printf("Failed to send notification for question with id %s: %v", question.Id, err)
+			log.Printf("[ERROR] Failed to send notification for question with id %s: %v", question.Id, err)
 		} else {
-			log.Printf("Sent question notification with id %s", question.Id)
+			log.Printf("[INFO] Sent question notification with id %s", question.Id)
 		}
 	}
 
 	for _, feedback := range feedbacks {
 		if err := monitor.notifier.SendFeedbackNotification(feedback); err != nil {
-			log.Printf("Failed to send notification for feedback with id %s: %v", feedback.Id, err)
+			log.Printf("[ERROR] Failed to send notification for feedback with id %s: %v", feedback.Id, err)
 		} else {
-			log.Printf("Sent feedback notification with id %s", feedback.Id)
+			log.Printf("[INFO] Sent feedback notification with id %s", feedback.Id)
 		}
 	}
 
