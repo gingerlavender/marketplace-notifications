@@ -106,7 +106,7 @@ func (monitor *Monitor) checkForUpdates() {
 
 	}
 
-	log.Println("Checking for feedbacks...")
+	log.Println("[INFO] Checking for feedbacks...")
 
 	feedbacks, feedbacksErr := monitor.apiClient.FetchWBFeedbacksForPeriod(monitor.config.CheckInterval)
 	if feedbacksErr != nil {
