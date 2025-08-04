@@ -8,6 +8,7 @@ import (
 	"marketplace-notifications/internal/monitor"
 	"marketplace-notifications/internal/telegram"
 	"net/http"
+	"os"
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -19,6 +20,8 @@ type App struct {
 }
 
 func NewApp() *App {
+	log.SetOutput(os.Stdout)
+
 	if err := godotenv.Load(); err != nil {
 		log.Printf("[WARN] Warning: Could not load .env file: %v", err)
 		log.Println("[INFO] Assuming environment variables are set directly")
