@@ -20,13 +20,13 @@ type App struct {
 
 func NewApp() *App {
 	if err := godotenv.Load(); err != nil {
-		log.Printf("Warning: Could not load .env file: %v", err)
-		log.Println("Assuming environment variables are set directly")
+		log.Printf("[WARN] Warning: Could not load .env file: %v", err)
+		log.Println("[INFO] Assuming environment variables are set directly")
 	}
 
 	config, err := config.Load()
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("[ERROR] Failed to load config: ", err)
 	}
 
 	apiClient := client.NewAPIClient(&config.API)
