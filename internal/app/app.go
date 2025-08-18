@@ -53,7 +53,7 @@ func (app *App) Run() {
 	router.GET("/info", app.getInfo)
 	router.POST("/start", app.start)
 	router.POST("/stop", app.stop)
-	router.POST("/notify", app.handleYandexPing)
+	router.POST("/api/notify", app.handleYandexPing)
 
 	router.Run(fmt.Sprintf(":%d", app.config.Port))
 }
@@ -101,7 +101,7 @@ func (app *App) handleYandexPing(c *gin.Context) {
 		return
 	}
 
-	if !ip.IsAllowed(clientIP, yandex.IPWhitelist) {
+	if !ip.IsInWhitelist(clientIP, yandex.IPWhitelist) {
 		c.JSON(http.StatusForbidden, gin.H{"error": "IP is not in the whitelist"})
 		return
 	}
