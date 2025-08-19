@@ -53,7 +53,7 @@ func (app *App) Run() {
 	router.GET("/info", app.getInfo)
 	router.POST("/start", app.start)
 	router.POST("/stop", app.stop)
-	router.POST("/api/notify", app.handleYandexPing)
+	router.POST("/api/notification", app.handleYandexPing)
 
 	router.Run(fmt.Sprintf(":%d", app.config.Port))
 }
