@@ -2,9 +2,12 @@ package monitor
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"log"
 	"marketplace-notifications/internal/client"
 	"marketplace-notifications/internal/config"
+	"marketplace-notifications/internal/marketplaces/yandex"
 	"marketplace-notifications/internal/telegram"
 	"sync"
 	"time"
@@ -62,6 +65,50 @@ func (monitor *Monitor) Stop() {
 	if monitor.cancel != nil {
 		monitor.cancel()
 	}
+}
+
+func (monitor *Monitor) HandleYandexNotification(rawNotification json.RawMessage) error {
+	monitor.mutex.Lock()
+	defer monitor.mutex.Unlock()
+
+	if !monitor.isRunning {
+		log.Println("[INFO] Monitor is not running")
+		return fmt.Errorf("monitor is not running")
+	}
+
+	var notificationBase yandex.NotificationBase
+
+	if err := json.Unmarshal(rawNotification, &notificationBase); err != nil {
+		log.Println("[ERROR] Failed to unmarshal new Yandex notification")
+		return fmt.Errorf("failed to unmarshal Yandex notification: %w", err)
+	}
+
+	switch notificationBase.NotificationType {
+	case "GOODS_FEEDBACK_CREATED":
+		var feedbackNotification yandex.FeedbackNotification
+		if err := json.Unmarshal(rawNotification, &feedbackNotification); err != nil {
+			log.Println("[ERROR] Failed to parse new Yandex feedback notification")
+			return fmt.Errorf("failed to parse Yandex feedback notification: %w", err)
+		}
+
+		log.Printf("[INFO] New Yandex feedback notification (id: %d)", feedbackNotification.FeedbackId)
+
+		var feedback yandex.Feedback
+		if err := monitor.apiClient.FetchYandexFeedback(feedbackNotification.BusinessId, feedbackNotification.FeedbackId, &feedback); err != nil {
+			log.Printf("[ERROR] Unable to fetch Yandex feedback with id %d", feedbackNotification.FeedbackId)
+			return fmt.Errorf("unable to fetch Yandex feedback with id %d", feedbackNotification.FeedbackId)
+		}
+
+		monitor.lastUpdateDiscovered = feedback.CreatedDate
+
+		if err := monitor.notifier.SendYandexFeedbackNotificationToAllChats(feedback); err != nil {
+			log.Printf("[ERROR] Failed to send notification for feedback with id %d: %v", feedback.Id, err)
+		} else {
+			log.Printf("[INFO] Sent feedback notification with id %d", feedback.Id)
+		}
+	}
+
+	return nil
 }
 
 func (monitor *Monitor) IsRunning() bool {
@@ -131,7 +178,7 @@ func (monitor *Monitor) checkForUpdates() {
 	}
 
 	for _, question := range questions {
-		if err := monitor.notifier.SendQuestionNotificationToAllChats(question); err != nil {
+		if err := monitor.notifier.SendWBQuestionNotificationToAllChats(question); err != nil {
 			log.Printf("[ERROR] Failed to send notification for question with id %s: %v", question.Id, err)
 		} else {
 			log.Printf("[INFO] Sent question notification with id %s", question.Id)
@@ -139,11 +186,10 @@ func (monitor *Monitor) checkForUpdates() {
 	}
 
 	for _, feedback := range feedbacks {
-		if err := monitor.notifier.SendFeedbackNotificationToAllChats(feedback); err != nil {
+		if err := monitor.notifier.SendWBFeedbackNotificationToAllChats(feedback); err != nil {
 			log.Printf("[ERROR] Failed to send notification for feedback with id %s: %v", feedback.Id, err)
 		} else {
 			log.Printf("[INFO] Sent feedback notification with id %s", feedback.Id)
 		}
 	}
-
 }

@@ -3,6 +3,7 @@ package app
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"marketplace-notifications/internal/client"
 	"marketplace-notifications/internal/config"
@@ -13,7 +14,6 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -53,7 +53,7 @@ func (app *App) Run() {
 	router.GET("/info", app.getInfo)
 	router.POST("/start", app.start)
 	router.POST("/stop", app.stop)
-	router.POST("/api/notification", app.handleYandexPing)
+	router.POST("/api/notification", app.handleNotification)
 
 	router.Run(fmt.Sprintf(":%d", app.config.Port))
 }
@@ -94,31 +94,31 @@ func (app *App) stop(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "running stops..."})
 }
 
-func (app *App) handleYandexPing(c *gin.Context) {
+func (app *App) handleNotification(c *gin.Context) {
 	clientIP := net.ParseIP(c.ClientIP())
 	if clientIP == nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "unable to determine client IP"})
 		return
 	}
 
-	if !ip.IsInWhitelist(clientIP, yandex.IPWhitelist) {
-		c.JSON(http.StatusForbidden, gin.H{"error": "IP is not in the whitelist"})
+	if ip.IsInWhitelist(clientIP, yandex.IPWhitelist) {
+		defer c.Request.Body.Close()
+		body, err := io.ReadAll(c.Request.Body)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "unable to read request body"})
+			return
+		}
+
+		rawNotification := json.RawMessage(body)
+
+		if err := app.monitor.HandleYandexNotification(rawNotification); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"message": "success"})
 		return
 	}
 
-	var body yandex.PingRequest
-
-	err := json.NewDecoder(c.Request.Body).Decode(&body)
-
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "unable to decode request body"})
-		return
-	}
-
-	if body.NotificatonType != "PING" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "wrong notification type"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"version": "0.1.0", "name": "Bezlimit", "time": body.Time.Format(time.RFC3339)})
+	c.JSON(http.StatusForbidden, gin.H{"error": "IP is not in the whitelist"})
 }

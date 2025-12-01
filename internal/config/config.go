@@ -2,8 +2,8 @@ package config
 
 import (
 	"fmt"
-	"marketplace-notifications/internal/marketplaces"
 	"marketplace-notifications/internal/marketplaces/wb"
+	"marketplace-notifications/internal/marketplaces/yandex"
 	"marketplace-notifications/internal/utils/env"
 	"time"
 )
@@ -25,7 +25,8 @@ type MonitorConfig struct {
 }
 
 type APIConfig struct {
-	WB      marketplaces.MarketplaceConfig
+	WB      wb.Config
+	Yandex  yandex.Config
 	Timeout time.Duration
 }
 
@@ -47,6 +48,7 @@ func Load() (*Config, error) {
 		},
 		API: APIConfig{
 			WB:      wb.GetConfig(env.GetEnv("WB_JWT", ""), env.GetEnvInt("MAX_NEW_QUESTIONS_TO_FETCH", 20), env.GetEnvInt("MAX_NEW_FEEDBACKS_TO_FETCH", 20)),
+			Yandex:  yandex.GetConfig(env.GetEnv("YANDEX_TOKEN", "")),
 			Timeout: env.GetEnvDuration("MARKETPLACE_API_TIMEOUT", 30*time.Second),
 		},
 		Telegram: TelegramConfig{
@@ -68,8 +70,12 @@ func (config *Config) validate() error {
 	if config.Server.ControlToken == "" {
 		return fmt.Errorf("missing control token")
 	}
+
 	if config.API.WB.JWT == "" {
 		return fmt.Errorf("missing WB_JWT")
+	}
+	if config.API.Yandex.APIToken == "" {
+		return fmt.Errorf("missing YANDEX_TOKEN")
 	}
 
 	if config.Telegram.BotToken == "" {

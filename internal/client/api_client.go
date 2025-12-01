@@ -1,6 +1,7 @@
 package client
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -8,6 +9,7 @@ import (
 	"marketplace-notifications/internal/config"
 	"marketplace-notifications/internal/marketplaces"
 	"marketplace-notifications/internal/marketplaces/wb"
+	"marketplace-notifications/internal/marketplaces/yandex"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -16,20 +18,23 @@ import (
 )
 
 type APIClient struct {
-	config     *config.APIConfig
-	httpClient *http.Client
-	wbLimiter  *rate.Limiter
+	config        *config.APIConfig
+	httpClient    *http.Client
+	wbLimiter     *rate.Limiter
+	yandexLimiter *rate.Limiter
 }
 
 func NewAPIClient(config *config.APIConfig) *APIClient {
 	wbLimiter := rate.NewLimiter(rate.Limit(config.WB.RPS), config.WB.Burst)
+	yandexLimiter := rate.NewLimiter(rate.Limit(config.Yandex.RPS), config.Yandex.Burst)
 
 	return &APIClient{
 		config: config,
 		httpClient: &http.Client{
 			Timeout: config.Timeout,
 		},
-		wbLimiter: wbLimiter,
+		wbLimiter:     wbLimiter,
+		yandexLimiter: yandexLimiter,
 	}
 }
 
@@ -115,4 +120,51 @@ func (client *APIClient) FetchWBData(reactionType marketplaces.UserReactionType)
 	}
 
 	return body, nil
+}
+
+func (client *APIClient) FetchYandexFeedback(businessId, feedbackId int, feedback *yandex.Feedback) error {
+	if err := client.yandexLimiter.Wait(context.Background()); err != nil {
+		return fmt.Errorf("WB rate limiter error: %w", err)
+	}
+
+	reqBody := map[string]any{"feedbackIds": []int{feedbackId}}
+	jsonData, err := json.Marshal(reqBody)
+	if err != nil {
+		return fmt.Errorf("error marshalling JSON: %w", err)
+	}
+
+	req, err := http.NewRequest("POST", client.config.Yandex.FeedbacksURL(businessId), bytes.NewReader(jsonData))
+	if err != nil {
+		return fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("content-type", "application/json")
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", client.config.Yandex.APIToken))
+
+	resp, err := client.httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to send request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("failed to read response body")
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("API returned status %d instead of 200: %s", resp.StatusCode, respBody)
+	}
+
+	var feedbacksResponse yandex.FeedbacksResponse
+	if err := json.Unmarshal(respBody, &feedbacksResponse); err != nil {
+		return fmt.Errorf("failed to parse Yandex feedback response: %w", err)
+	}
+
+	if len(feedbacksResponse.Result.Feedbacks) == 0 {
+		return fmt.Errorf("unable to fetch Yandex feedback with id %d", feedbackId)
+	}
+
+	*feedback = feedbacksResponse.Result.Feedbacks[0]
+	return nil
 }

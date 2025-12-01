@@ -10,6 +10,7 @@ import (
 	"marketplace-notifications/internal/config"
 	"marketplace-notifications/internal/marketplaces"
 	"marketplace-notifications/internal/marketplaces/wb"
+	"marketplace-notifications/internal/marketplaces/yandex"
 	"net/http"
 	"strings"
 
@@ -48,12 +49,16 @@ func (notifier *TelegramNotifier) SendSummaryNotificationToAllChats(questionsNum
 	return notifier.sendNotificationToAllChats(notifier.formatSummaryNotificationMessage(questionsNumber, feedbacksNumber))
 }
 
-func (notifier *TelegramNotifier) SendQuestionNotificationToAllChats(question wb.Question) error {
-	return notifier.sendNotificationToAllChats(notifier.formatUserReactionNotificationMessage(question, marketplaces.Question))
+func (notifier *TelegramNotifier) SendWBQuestionNotificationToAllChats(question wb.Question) error {
+	return notifier.sendNotificationToAllChats(notifier.formatUserReactionNotificationMessage(question, marketplaces.Question, "WB"))
 }
 
-func (notifier *TelegramNotifier) SendFeedbackNotificationToAllChats(feedback wb.Feedback) error {
-	return notifier.sendNotificationToAllChats(notifier.formatUserReactionNotificationMessage(feedback, marketplaces.Feedback))
+func (notifier *TelegramNotifier) SendWBFeedbackNotificationToAllChats(feedback wb.Feedback) error {
+	return notifier.sendNotificationToAllChats(notifier.formatUserReactionNotificationMessage(feedback, marketplaces.Feedback, "WB"))
+}
+
+func (notifier *TelegramNotifier) SendYandexFeedbackNotificationToAllChats(feedback yandex.Feedback) error {
+	return notifier.sendNotificationToAllChats(notifier.formatUserReactionNotificationMessage(feedback, marketplaces.Feedback, "Yandex"))
 }
 
 func (notifier *TelegramNotifier) sendNotificationToAllChats(text string) error {
@@ -121,13 +126,13 @@ func (notifier *TelegramNotifier) formatSummaryNotificationMessage(questionsNumb
 	return message.String()
 }
 
-func (notifier *TelegramNotifier) formatUserReactionNotificationMessage(userReaction MardownFormatter, reactionType marketplaces.UserReactionType) string {
+func (notifier *TelegramNotifier) formatUserReactionNotificationMessage(userReaction MardownFormatter, reactionType marketplaces.UserReactionType, serviceName string) string {
 	var message strings.Builder
 
 	if reactionType == marketplaces.Question {
-		message.WriteString(fmt.Sprintf("*❔ Неотвеченный вопрос:*\n\n"))
+		message.WriteString(fmt.Sprintf("*❔ Неотвеченный вопрос на %s:*\n\n", serviceName))
 	} else {
-		message.WriteString(fmt.Sprintf("*💬 Неотвеченный отзыв:*\n\n"))
+		message.WriteString(fmt.Sprintf("*💬 Неотвеченный отзыв на %s:*\n\n", serviceName))
 	}
 
 	message.WriteString(userReaction.FormatMarkdown())
